@@ -1,0 +1,14 @@
+# Secrets and local settings: never commit. Copy .env.example to .env instead.
+.env
+
+# Real data: accounts, audit trail and uploaded documents
+*.sqlite3
+*.sqlite3-journal
+uploads/
+
+# Python and test tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+tests_e2e/failures/
