@@ -31,6 +31,20 @@ uvicorn app:app --reload --host 127.0.0.1 --port 8000
 - `MTB_ADMIN_EMAILS` — comma-separated MTB Admins. Create a login with `python create_admin.py email "First Last"`.
 - `BREVO_API_KEY`, `MTB_MAIL_FROM`, `MTB_MAIL_FROM_NAME`, `MTB_APP_URL` — real email through Brevo (free plan: 300 emails a day); see `mailer.py`. With the key empty, nothing is sent and messages only reach the test inbox. The sender address must be verified in Brevo. The MTB Admin console shows whether delivery is working and can send a test email. SMS is not connected yet.
 
+### My Profile and CV auto-fill (Module 02)
+
+Every person has one profile (`mtb_profile.py`, `static/profile.js`) built from `MTB_Profile_BRD` sections 1-25, except Clinical Trial Experience (section 10), which is a later module.
+
+- **Wizard** with 16 steps (Basic Information to Declaration), saved step by step, with a sign-in reminder while the profile is incomplete.
+- **CV auto-fill.** Add `OPENAI_API_KEY` to `.env`. The CV (PDF, DOC or DOCX) is sent to the OpenAI Responses API as a file, so any layout, scanned pages included, can be read. The answer must match a strict JSON schema built from the same section definitions as the forms, is cleaned again on the server, and is shown as a preview where each entry is accepted, edited or rejected. Nothing is saved until the person presses *Save confirmed fields*. Verified name, email and phone are never overwritten; duplicates and conflicts are flagged.
+- `MTB_OPENAI_MODEL` (default `gpt-6.1-terra`), `MTB_OPENAI_REASONING` (optional) and `OPENAI_BASE_URL` (proxy or test stub) are optional. Without a key the feature is switched off.
+- **E-signature.** The declaration is signed with the typed full name and the account password; it is sealed and written to the audit trail.
+- **Export as CV** to PDF and DOCX (Professional and Clinical Research templates; the trial-experience template is greyed out until that section exists). Aadhaar, identity documents and uploaded files are never exported.
+- **Teammates** can see the professional sections the owner leaves switched on (*Team profiles* tab). Contact details, address, identity and files are never shown. Organization Admin status gives no extra access.
+- Uploaded files live in `uploads/profile/` and are served only to their owner.
+
+The browser tests use a stand-in for OpenAI (`tests_e2e/fake_openai.py`), so they never call the real service.
+
 ### Google address autofill (optional)
 
 Typing an organization or hospital name suggests matches and fills in address, city, state, PIN, phone and website.

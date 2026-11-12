@@ -10,6 +10,7 @@ import os, sys, socket, subprocess, tempfile, time
 from pathlib import Path
 import httpx, pytest
 from playwright.sync_api import sync_playwright
+import fake_openai
 
 APP_DIR = Path(__file__).resolve().parents[1]
 ADMIN_EMAIL = 'e2e.admin@example.org'
@@ -21,12 +22,21 @@ def free_port():
 
 
 @pytest.fixture(scope='session')
-def base_url():
+def ai():
+    """Stand-in for the OpenAI API (see fake_openai.py): CV auto-fill is tested without calling the real service."""
+    server = fake_openai.start()
+    yield server
+    server.shutdown()
+
+
+@pytest.fixture(scope='session')
+def base_url(ai):
     tmp = Path(tempfile.mkdtemp(prefix='mtb-e2e-'))
     port = free_port()
     env = {**os.environ, 'MTB_DB': str(tmp / 'e2e.sqlite3'), 'MTB_UPLOADS': str(tmp / 'uploads'), 'MTB_DEV_MODE': '1',
            'MTB_SECRET': 'e2e-only-secret-0123456789abcdef0123456789', 'MTB_GOOGLE_MAPS_KEY': '', 'MTB_ADMIN_EMAILS': ADMIN_EMAIL,
-           'MTB_FORCE_HTTPS': '0', 'BREVO_API_KEY': '', 'BREVO_SMTP_KEY': '', 'BREVO_SMTP_LOGIN': '', 'MTB_PHONE_CODE_ON_SCREEN': '0'}  # never sends real email
+           'MTB_FORCE_HTTPS': '0', 'BREVO_API_KEY': '', 'BREVO_SMTP_KEY': '', 'BREVO_SMTP_LOGIN': '', 'MTB_PHONE_CODE_ON_SCREEN': '0',  # never sends real email
+           'OPENAI_API_KEY': 'sk-e2e-stub', 'OPENAI_BASE_URL': ai.url, 'MTB_OPENAI_MODEL': 'e2e-model'}   # never calls the real AI service
     log = open(tmp / 'server.log', 'w')
     proc = subprocess.Popen([sys.executable, '-m', 'uvicorn', 'app:app', '--host', '127.0.0.1', '--port', str(port)], cwd=APP_DIR, env=env, stdout=log, stderr=subprocess.STDOUT)
     url = f'http://127.0.0.1:{port}'

@@ -66,6 +66,13 @@ def login(page, base, email, password=PW, expect='.dash-top h2, .ws-option, .adm
         page.fill('#login_password', password); page.dispatch_event('#login_password', 'input')
         page.fill('#login_captcha', str(page.evaluate('loginCaptcha.a + loginCaptcha.b'))); page.click('#loginBtn')
     if expect: page.wait_for_selector(expect)
+    if page.evaluate('!!state.me'): dismiss_profile_reminder(page)
+
+
+def dismiss_profile_reminder(page, keep=False):
+    """After sign-in a pop-up says the profile is not complete yet. Most tests close it and carry on."""
+    page.wait_for_function("state.pf.nudge === 'done'")
+    if not keep and page.locator('.pf-nudge').count(): page.locator('.modal-back', has=page.locator('.pf-nudge')).locator('button', has_text='Later').click()
 
 
 def fill_org_step(page, typ, name, phone, cats=None, city='Hyderabad'):

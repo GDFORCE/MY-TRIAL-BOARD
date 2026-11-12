@@ -401,6 +401,7 @@ def purge_stale(c):
             c.execute('DELETE FROM organizations WHERE id=?',(o['id'],))
             if o['legal_doc']:(UPLOADS/o['legal_doc']).unlink(missing_ok=True)
             audit(c,None,'registration_expired','organization',o['id'],o['id'])
+        mtb_profile.erase_user(c,uid)
         for t in ('otps','sessions','consents','memberships','claims'):c.execute(f'DELETE FROM {t} WHERE user_id=?',(uid,))
         c.execute('DELETE FROM users WHERE id=?',(uid,))
         audit(c,None,'registration_expired','user',uid)
@@ -1402,6 +1403,7 @@ async def admin_user_action(uid:int,request:Request):
             c.execute('UPDATE pi_links SET status="inactive" WHERE user_id=?',(uid,))
             c.execute('UPDATE invitations SET status="cancelled" WHERE email=? AND status="pending"',(u['email'],))
             c.execute('DELETE FROM otps WHERE user_id=?',(uid,))
+            mtb_profile.erase_user(c,uid)  # profile content, uploaded CV and documents
         after=c.execute('SELECT status FROM users WHERE id=?',(uid,)).fetchone()['status']
         audit(c,me['id'],'mtb_admin_user_'+action,'user',uid,details={'email':u['email'] if action!='delete' else None,'from':u['status'],'to':after})
     return {'ok':True}
@@ -1472,3 +1474,7 @@ def organization_claims(request:Request):
     with db() as c:
         u,s=auth(request,c)
         return {'memberships':[dict(x) for x in c.execute('SELECT m.org_id,o.name,m.role,m.status FROM memberships m JOIN organizations o ON o.id=m.org_id WHERE m.user_id=?',(u['id'],))]}
+
+# ---------- Module 02: My Profile (CV auto-fill, sections, declaration, CV export). See mtb_profile.py ----------
+import sys, mtb_profile
+mtb_profile.attach(sys.modules[__name__])
